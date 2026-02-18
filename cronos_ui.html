@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRONOS OS - Sistema Operacional Avancado</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --arc-blue: #00d9ff;
+            --arc-cyan: #00ffff;
+            --stark-gold: #ffd700;
+            --deep-black: #0a0e14;
+            --panel-dark: #0d1117;
+            --panel-border: rgba(0, 217, 255, 0.3);
+        }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: radial-gradient(ellipse at center, #0f1419 0%, #050810 100%);
+            color: var(--arc-cyan);
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* SCANLINES */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        /* GRID BACKGROUND */
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* HEADER */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(180deg, rgba(0, 217, 255, 0.15) 0%, transparent 100%);
+            border-bottom: 2px solid var(--arc-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 1000;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: var(--arc-cyan);
+            text-shadow: 0 0 10px var(--arc-blue);
+            animation: pulse 2s infinite;
+            cursor: pointer;
+        }
+
+        .logo:hover {
+            color: var(--stark-gold);
+            text-shadow: 0 0 15px var(--stark-gold);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 25px;
+            font-size: 11px;
+        }
+
+        .status-item {
+            text-align: right;
+        }
+
+        .status-label {
+            color: rgba(0, 217, 255, 0.6);
+            font-size: 9px;
+        }
+
+        .status-value {
+            color: var(--stark-gold);
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .header-input {
+            width: 90px;
+            padding: 6px 8px;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: rgba(0, 217, 255, 0.08);
+            color: var(--arc-cyan);
+            outline: none;
+        }
+
+        .header-input:focus {
+            border-color: var(--arc-cyan);
+            box-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+        }
+
+        .header-toggle {
+            padding: 6px 10px;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: rgba(0, 217, 255, 0.08);
+            color: var(--arc-cyan);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .header-toggle.active {
+            background: rgba(0, 217, 255, 0.25);
+            border-color: var(--arc-cyan);
+            box-shadow: 0 0 10px rgba(0, 217, 255, 0.4);
+            color: var(--stark-gold);
+        }
+
+        /* DESKTOP AREA */
+        .desktop {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 50px;
+            z-index: 1;
+        }
+
+        /* DRAGGABLE WINDOW */
+        .window {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(13, 17, 23, 0.95) 0%, rgba(10, 14, 20, 0.98) 100%);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px rgba(0, 217, 255, 0.3);
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+
+        .window.active {
+            border-color: var(--arc-blue);
+            box-shadow: 0 0 50px rgba(0, 217, 255, 0.5);
+            z-index: 100 !important;
+        }
+
+        .window-header {
+            height: 35px;
+            background: linear-gradient(180deg, rgba(0, 217, 255, 0.2) 0%, rgba(0, 217, 255, 0.05) 100%);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            cursor: move;
+            user-select: none;
+        }
+
+        .window-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            color: var(--arc-cyan);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .window-btn:hover {
+            transform: scale(1.3);
+        }
+
+        .btn-minimize { background: var(--stark-gold); box-shadow: 0 0 10px var(--stark-gold); }
+        .btn-maximize { background: #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .btn-close { background: #ff0040; box-shadow: 0 0 10px #ff0040; }
+
+        .window-content {
+            padding: 15px;
+            overflow-y: auto;
+            max-height: calc(100% - 35px);
+        }
+
+        /* CUSTOM SCROLLBAR */
+        .window-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .window-content::-webkit-scrollbar-track {
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .window-content::-webkit-scrollbar-thumb {
+            background: var(--arc-blue);
+            box-shadow: 0 0 5px var(--arc-blue);
+        }
+
+        /* SYSTEM MONITOR WINDOW */
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .metric-label {
+            color: rgba(0, 217, 255, 0.7);
+            font-size: 12px;
+        }
+
+        .metric-value {
+            color: var(--stark-gold);
+            font-weight: bold;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 217, 255, 0.1);
+            margin-top: 5px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 3px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--arc-blue), var(--arc-cyan));
+            box-shadow: 0 0 10px var(--arc-blue);
+            transition: width 0.5s;
+        }
+
+        /* CONSOLE WINDOW */
+        .console-output {
+            font-size: 12px;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .console-line {
+            margin-bottom: 5px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .console-prompt {
+            color: var(--arc-cyan);
+        }
+
+        .console-text {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .console-success {
+            color: #00ff00;
+        }
+
+        .console-warning {
+            color: var(--stark-gold);
+        }
+
+        .console-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .input-prompt {
+            color: var(--arc-cyan);
+        }
+
+        .console-field {
+            flex: 1;
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            padding: 6px 10px;
+            outline: none;
+            border-radius: 3px;
+        }
+
+        .console-field:focus {
+            border-color: var(--arc-cyan);
+            box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+        }
+
+        /* TASKBAR */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: linear-gradient(0deg, rgba(0, 217, 255, 0.15) 0%, transparent 100%);
+            border-top: 2px solid var(--arc-blue);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .taskbar-btn {
+            padding: 8px 15px;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--panel-border);
+            border-radius: 5px;
+            color: var(--arc-cyan);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .taskbar-btn:hover {
+            background: rgba(0, 217, 255, 0.2);
+            border-color: var(--arc-blue);
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+        }
+
+        .taskbar-btn.active {
+            background: rgba(0, 217, 255, 0.3);
+            border-color: var(--arc-cyan);
+        }
+
+        /* NOTIFICATION POPUP */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 320px;
+            background: linear-gradient(135deg, rgba(13, 17, 23, 0.95) 0%, rgba(10, 14, 20, 0.98) 100%);
+            border: 1px solid var(--arc-blue);
+            border-radius: 8px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
+            animation: slideInRight 0.5s ease-out;
+            z-index: 2000;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--arc-cyan);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .notification-body {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+        }
+
+        .notif-badge {
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            border-radius: 999px;
+            margin-left: 6px;
+            font-size: 10px;
+            line-height: 16px;
+            text-align: center;
+            color: #fff;
+            background: #ff0040;
+            display: inline-block;
+        }
+
+        .palette-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(2px);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 12vh;
+            z-index: 3000;
+        }
+
+        .palette-box {
+            width: min(760px, 92vw);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(13, 17, 23, 0.98) 0%, rgba(10, 14, 20, 0.98) 100%);
+            box-shadow: 0 0 35px rgba(0, 217, 255, 0.3);
+            overflow: hidden;
+        }
+
+        .palette-input {
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0, 217, 255, 0.06);
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            padding: 14px;
+            outline: none;
+            margin: 0;
+        }
+
+        .palette-list {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .palette-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(0, 217, 255, 0.08);
+            cursor: pointer;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.86);
+        }
+
+        .palette-item:hover,
+        .palette-item.active {
+            background: rgba(0, 217, 255, 0.15);
+            color: var(--arc-cyan);
+        }
+
+        .timeline-entry {
+            border-bottom: 1px solid rgba(0, 217, 255, 0.12);
+            padding: 8px 0;
+            font-size: 12px;
+        }
+
+        .timeline-time {
+            color: var(--stark-gold);
+            font-size: 10px;
+            margin-right: 8px;
+        }
+
+        /* CIRCULAR HUD (background decoration) */
+        .hud-decoration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        .hud-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid var(--arc-blue);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .ring-outer {
+            width: 600px;
+            height: 600px;
+            animation: rotateClockwise 30s linear infinite;
+        }
+
+        .ring-middle {
+            width: 450px;
+            height: 450px;
+            animation: rotateCounter 20s linear infinite;
+            border-style: dashed;
+        }
+
+        .ring-inner {
+            width: 300px;
+            height: 300px;
+            animation: rotateClockwise 15s linear infinite;
+        }
+
+        @keyframes rotateClockwise {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @keyframes rotateCounter {
+            from { transform: translate(-50%, -50%) rotate(360deg); }
+            to { transform: translate(-50%, -50%) rotate(0deg); }
+        }
+
+        /* INPUT/TEXTAREA STYLES */
+        input[type="text"], textarea {
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            padding: 8px;
+            outline: none;
+            border-radius: 3px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--arc-cyan);
+            box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+        }
+
+        button {
+            padding: 8px 16px;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            color: var(--arc-cyan);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: rgba(0, 217, 255, 0.2);
+            border-color: var(--arc-blue);
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* MEMORY STATS */
+        .memory-stats {
+            background: rgba(0, 217, 255, 0.05);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .memory-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+
+        /* TIMER CARD */
+        .timer-card {
+            background: rgba(0, 217, 255, 0.08);
+            border: 1px solid var(--arc-blue);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            animation: timerPulse 2s infinite;
+        }
+
+        @keyframes timerPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 217, 255, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.6); }
+        }
+
+        .timer-title {
+            color: var(--arc-cyan);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .timer-remaining {
+            color: var(--stark-gold);
+            font-size: 18px;
+        }
+
+        /* CONNECTION STATUS INDICATOR */
+        .connection-status {
+            position: fixed;
+            bottom: 60px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--panel-border);
+            z-index: 1001;
+        }
+
+        .connection-status.connected {
+            color: #00ff00;
+            border-color: #00ff00;
+        }
+
+        .connection-status.disconnected {
+            color: #ff0040;
+            border-color: #ff0040;
+        }
+    </style>
+</head>
+<body>
+    <!-- GRID BACKGROUND -->
+    <div class="grid-background"></div>
+
+    <!-- HUD DECORATION -->
+    <div class="hud-decoration">
+        <div class="hud-ring ring-outer"></div>
+        <div class="hud-ring ring-middle"></div>
+        <div class="hud-ring ring-inner"></div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="logo" onclick="showAbout()" title="Sobre o CRONOS OS">CRONOS</div>
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-label">POWER CORE</div>
+                <div class="status-value" id="power">98.7%</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">NETWORK</div>
+                <div class="status-value" id="network-status">SECURE</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">TIME</div>
+                <div class="status-value" id="time">--:--:--</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">SYSTEMS</div>
+                <div class="status-value">ONLINE</div>
+            </div>
+        </div>
+        <div class="header-controls">
+            <button class="header-toggle" id="toggle-standby" onclick="toggleStandby()" title="Modo Stand-by">Stand-by</button>
+            <button class="header-toggle" id="toggle-snooze" onclick="toggleSnooze()" title="Modo Soneca">Soneca</button>
+            <button class="header-toggle" id="toggle-monitor" onclick="toggleMonitor()" title="Monitor Secundario">Tela 2</button>
+            <button class="header-toggle" id="toggle-proactive-vision" onclick="toggleProactiveVision()" title="Visao Proativa">Visao Proativa</button>
+            <button class="header-toggle" id="toggle-ptt" onclick="togglePtt()" title="Push-to-talk (Insert)">PTT</button>
+            <input class="header-input" id="ptt-key-input" placeholder="Tecla PTT" value="insert" maxlength="24" onkeypress="handlePttKeyEnter(event)">
+            <button class="header-toggle" id="apply-ptt-key" onclick="applyPttKey()" title="Atualizar tecla PTT">Tecla</button>
+            <button class="header-toggle" onclick="openCommandPalette()" title="Paleta de Comandos (Ctrl+K)">Cmd</button>
+            <button class="header-toggle" onclick="openWindowByType('settings')" title="Configuracoes">Config</button>
+        </div>
+    </div>
+
+    <!-- DESKTOP AREA -->
+    <div class="desktop" id="desktop"></div>
+
+    <!-- CONNECTION STATUS -->
+    <div class="connection-status connected" id="conn-status">● CONECTADO</div>
+
+    <!-- TASKBAR -->
+    <div class="taskbar" id="taskbar">
+        <div class="taskbar-btn" onclick="createWindow('system', 'Sistema', 300, 100)">Sistema</div>
+        <div class="taskbar-btn" onclick="createWindow('console', 'Console', 500, 120)">Console</div>
+        <div class="taskbar-btn" onclick="createWindow('knowledge', 'Conhecimento', 700, 150)">Conhecimento</div>
+        <div class="taskbar-btn" onclick="createWindow('message', 'Mensagem', 850, 200)">Mensagem</div>
+        <div class="taskbar-btn" onclick="createWindow('memory', 'Memoria', 400, 250)">Memoria</div>
+        <div class="taskbar-btn" onclick="openWindowByType('timeline')">Timeline</div>
+        <div class="taskbar-btn" onclick="openWindowByType('notifications')">Alertas <span class="notif-badge" id="notif-badge">0</span></div>
+        <div class="taskbar-btn" onclick="createWindow('timers', 'Temporizadores', 550, 300)">Timers</div>
+        <div class="taskbar-btn" onclick="openWindowByType('settings')">Config</div>
+        <div class="taskbar-btn" onclick="showNotification('Teste', 'Notificacao de teste do sistema!')">Notificacao</div>
+    </div>
+
+    <div class="palette-overlay" id="command-palette">
+        <div class="palette-box">
+            <input class="palette-input" id="palette-input" placeholder="Digite um comando (ex: abrir console, standby on, salvar layout)" oninput="renderPaletteList()">
+            <div class="palette-list" id="palette-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // GLOBAL STATE
+        // ========================================
+        let windowCounter = 0;
+        let activeWindow = null;
+        let windows = {};
+        let dragState = null;
+        let isConnected = false;
+        let timelineEntries = [];
+        let notificationFeed = [];
+        let unreadNotifications = 0;
+        let paletteIndex = 0;
+        let pollIntervalMs = 1000;
+        let pollTimer = null;
+        const LAYOUT_KEY = 'cronos_layout_v2';
+
+        const systemStats = {
+            cpu: 45,
+            memory: 62,
+            disk: 34,
+            gpu: 28,
+            network: 87
+        };
+
+        const timers = [];
+        const notifications = [];
+        const paletteCommands = [
+            { id: 'open-system', label: 'Abrir Sistema', run: () => openWindowByType('system') },
+            { id: 'open-console', label: 'Abrir Console', run: () => openWindowByType('console') },
+            { id: 'open-memory', label: 'Abrir Memoria', run: () => openWindowByType('memory') },
+            { id: 'open-timeline', label: 'Abrir Timeline', run: () => openWindowByType('timeline') },
+            { id: 'open-notifications', label: 'Abrir Alertas', run: () => openWindowByType('notifications') },
+            { id: 'open-settings', label: 'Abrir Configuracoes', run: () => openWindowByType('settings') },
+            { id: 'toggle-standby', label: 'Alternar Stand-by', run: () => toggleStandby() },
+            { id: 'toggle-snooze', label: 'Alternar Soneca', run: () => toggleSnooze() },
+            { id: 'toggle-ptt', label: 'Alternar PTT', run: () => togglePtt() },
+            { id: 'save-layout', label: 'Salvar Layout', run: () => { saveLayout(); showNotification('Layout', 'Layout salvo.'); } },
+            { id: 'reset-layout', label: 'Resetar Layout', run: () => resetLayout() },
+            { id: 'clear-notifs', label: 'Limpar Alertas', run: () => clearNotifications() },
+        ];
+
+        // ========================================
+        // PYWEBVIEW BRIDGE
+        // ========================================
+        async function callApi(name, ...args) {
+            try {
+                if (window.pywebview && window.pywebview.api && window.pywebview.api[name]) {
+                    return await window.pywebview.api[name](...args);
+                }
+            } catch (e) {
+                console.warn('API error:', e);
+            }
+            try {
+                const map = {
+                    submit_knowledge: '/api/submit_knowledge',
+                    submit_message: '/api/submit_message',
+                    clear_short_memory: '/api/clear_short',
+                    clear_long_memory: '/api/clear_long',
+                    clear_visual_memory: '/api/clear_visual',
+                    get_memory_stats: '/api/memory_stats',
+                    set_standby: '/api/standby',
+                    set_snooze: '/api/snooze',
+                    set_monitor: '/api/monitor',
+                    set_proactive_vision: '/api/proactive_vision',
+                    set_ptt: '/api/ptt',
+                    set_ptt_key: '/api/ptt_key'
+                };
+                const url = map[name];
+                if (!url) return null;
+                const payload = {};
+                if (name === 'submit_knowledge' || name === 'submit_message') {
+                    payload.text = args[0] || '';
+                } else if (name === 'set_ptt_key') {
+                    payload.key = String(args[0] || '').trim();
+                } else if (name.startsWith('set_')) {
+                    payload.enabled = !!args[0];
+                }
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                return await res.json();
+            } catch (e) {
+                console.warn('API error:', e);
+            }
+            return null;
+        }
+
+        window.cronosAddLog = function(prefix, text, className) {
+            const consoleWins = Object.keys(windows).filter(id => windows[id].type === 'console');
+            if (!consoleWins.length) return;
+            consoleWins.forEach(id => addConsoleLog(id, prefix, text, className || 'console-text'));
+        }
+
+        window.cronosNotify = function(title, body) {
+            showNotification(title, body);
+        }
+
+        window.cronosUpdateSystemStats = function(stats) {
+            const ids = Object.keys(windows).filter(id => windows[id].type === 'system');
+            ids.forEach(id => applySystemStats(id, stats));
+        }
+
+        window.cronosUpdateMemoryStats = function(stats) {
+            const ids = Object.keys(windows).filter(id => windows[id].type === 'memory');
+            ids.forEach(id => applyMemoryStats(id, stats));
+        }
+
+        window.cronosAddTimer = function(title, duration) {
+            timers.push({
+                title: title || 'Temporizador',
+                endTime: Date.now() + (duration * 1000),
+                duration: duration
+            });
+        }
+
+        window.cronosSetToggle = function(name, enabled) {
+            const btn = document.getElementById(`toggle-${String(name).replaceAll('_', '-')}`);
+            if (!btn) return;
+            if (enabled) btn.classList.add('active');
+            else btn.classList.remove('active');
+        }
+
+        window.cronosSetPttKey = function(key) {
+            const clean = String(key || 'insert').trim().toLowerCase() || 'insert';
+            const input = document.getElementById('ptt-key-input');
+            const pttBtn = document.getElementById('toggle-ptt');
+            if (input) input.value = clean;
+            if (pttBtn) pttBtn.title = `Push-to-talk (${clean})`;
+        }
+
+        function trackTimeline(type, message) {
+            const now = new Date();
+            timelineEntries.unshift({
+                at: now.toLocaleTimeString('pt-BR'),
+                type: String(type || 'info').toUpperCase(),
+                message: String(message || ''),
+            });
+            if (timelineEntries.length > 250) {
+                timelineEntries = timelineEntries.slice(0, 250);
+            }
+            renderTimelineWindows();
+        }
+
+        function saveLayout() {
+            const data = {};
+            Object.keys(windows).forEach(id => {
+                const win = windows[id];
+                const el = document.getElementById(id);
+                if (!win || !el) return;
+                data[win.type] = {
+                    left: el.style.left,
+                    top: el.style.top,
+                    width: el.style.width,
+                    height: el.style.height,
+                    minimized: !!win.minimized
+                };
+            });
+            localStorage.setItem(LAYOUT_KEY, JSON.stringify(data));
+        }
+
+        function loadLayout() {
+            try {
+                return JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}');
+            } catch (_e) {
+                return {};
+            }
+        }
+
+        function resetLayout() {
+            localStorage.removeItem(LAYOUT_KEY);
+            location.reload();
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notif-badge');
+            if (!badge) return;
+            badge.textContent = String(unreadNotifications);
+            badge.style.display = unreadNotifications > 0 ? 'inline-block' : 'none';
+        }
+
+        function addNotificationEntry(title, body) {
+            notificationFeed.unshift({
+                at: new Date().toLocaleTimeString('pt-BR'),
+                title: String(title || 'Info'),
+                body: String(body || ''),
+            });
+            if (notificationFeed.length > 200) {
+                notificationFeed = notificationFeed.slice(0, 200);
+            }
+            unreadNotifications += 1;
+            updateNotificationBadge();
+            renderNotificationWindows();
+        }
+
+        function clearNotifications() {
+            notificationFeed = [];
+            unreadNotifications = 0;
+            updateNotificationBadge();
+            renderNotificationWindows();
+        }
+
+        function openWindowByType(type) {
+            const existingId = Object.keys(windows).find(id => windows[id].type === type);
+            if (existingId) {
+                const win = windows[existingId];
+                const el = document.getElementById(existingId);
+                if (win && win.minimized && el) {
+                    el.style.display = 'block';
+                    win.minimized = false;
+                }
+                setActiveWindow(existingId);
+                return existingId;
+            }
+            const titles = {
+                system: 'Sistema',
+                console: 'Console',
+                knowledge: 'Conhecimento',
+                message: 'Mensagem',
+                memory: 'Memoria',
+                timers: 'Temporizadores',
+                timeline: 'Timeline',
+                notifications: 'Alertas',
+                settings: 'Configuracoes'
+            };
+            return createWindow(type, titles[type] || type, 120, 100);
+        }
+
+        function openCommandPalette() {
+            const overlay = document.getElementById('command-palette');
+            const input = document.getElementById('palette-input');
+            if (!overlay || !input) return;
+            overlay.style.display = 'flex';
+            input.value = '';
+            paletteIndex = 0;
+            renderPaletteList();
+            setTimeout(() => input.focus(), 10);
+        }
+
+        function closeCommandPalette() {
+            const overlay = document.getElementById('command-palette');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function runPaletteCommand(index) {
+            const filtered = getFilteredPaletteCommands();
+            const cmd = filtered[index];
+            if (!cmd) return;
+            closeCommandPalette();
+            try {
+                cmd.run();
+                trackTimeline('cmd', `Paleta: ${cmd.label}`);
+            } catch (_e) {}
+        }
+
+        function getFilteredPaletteCommands() {
+            const input = document.getElementById('palette-input');
+            const q = String((input && input.value) || '').trim().toLowerCase();
+            if (!q) return paletteCommands;
+            return paletteCommands.filter(c => c.label.toLowerCase().includes(q));
+        }
+
+        function renderPaletteList() {
+            const list = document.getElementById('palette-list');
+            if (!list) return;
+            const filtered = getFilteredPaletteCommands();
+            if (!filtered.length) {
+                list.innerHTML = '<div class="palette-item">Nenhum comando encontrado.</div>';
+                return;
+            }
+            if (paletteIndex >= filtered.length) paletteIndex = 0;
+            list.innerHTML = filtered.map((cmd, idx) => `
+                <div class="palette-item ${idx === paletteIndex ? 'active' : ''}" onclick="runPaletteCommand(${idx})">${cmd.label}</div>
+            `).join('');
+        }
+
+        function renderTimelineWindows() {
+            const ids = Object.keys(windows).filter(id => windows[id].type === 'timeline');
+            ids.forEach(id => {
+                const el = document.getElementById(`${id}-timeline-list`);
+                if (!el) return;
+                el.innerHTML = timelineEntries.slice(0, 120).map(item => `
+                    <div class="timeline-entry">
+                        <span class="timeline-time">${item.at}</span>
+                        <strong>[${item.type}]</strong> ${item.message}
+                    </div>
+                `).join('') || '<p style="font-size:12px;color:rgba(0,217,255,.7)">Sem eventos.</p>';
+            });
+        }
+
+        function renderNotificationWindows() {
+            const ids = Object.keys(windows).filter(id => windows[id].type === 'notifications');
+            ids.forEach(id => {
+                const el = document.getElementById(`${id}-notifications-list`);
+                if (!el) return;
+                el.innerHTML = notificationFeed.slice(0, 120).map(item => `
+                    <div class="timeline-entry">
+                        <span class="timeline-time">${item.at}</span>
+                        <strong>${item.title}</strong><br>
+                        <span>${item.body}</span>
+                    </div>
+                `).join('') || '<p style="font-size:12px;color:rgba(0,217,255,.7)">Sem alertas.</p>';
+            });
+        }
+
+        window.cronosSetSpeaking = function(active) {
+            const power = document.getElementById('power');
+            if (!power) return;
+            power.textContent = active ? 'ACTIVE' : '98.7%';
+        }
+
+        window.cronosSetMicLevel = function(level) {
+            // Placeholder for future mic HUD
+        }
+
+        // ========================================
+        // WINDOW MANAGEMENT
+        // ========================================
+        function createWindow(type, title, x, y, width, height) {
+            const id = `window-${windowCounter++}`;
+            
+            // Default sizes based on type
+            const sizes = {
+                system: { width: 400, height: 350 },
+                console: { width: 600, height: 400 },
+                knowledge: { width: 500, height: 450 },
+                message: { width: 500, height: 400 },
+                memory: { width: 450, height: 400 },
+                timeline: { width: 520, height: 420 },
+                notifications: { width: 520, height: 420 },
+                settings: { width: 460, height: 320 },
+                timers: { width: 400, height: 500 }
+            };
+
+            const size = sizes[type] || { width: 400, height: 300 };
+            width = width || size.width;
+            height = height || size.height;
+
+            const win = document.createElement('div');
+            win.className = 'window';
+            win.id = id;
+            win.style.width = width + 'px';
+            win.style.height = height + 'px';
+            win.style.left = x + 'px';
+            win.style.top = y + 'px';
+            win.style.zIndex = windowCounter;
+
+            win.innerHTML = `
+                <div class="window-header" onmousedown="startDrag('${id}', event)">
+                    <div class="window-title">${title}</div>
+                    <div class="window-controls">
+                        <div class="window-btn btn-minimize" onclick="minimizeWindow('${id}')"></div>
+                        <div class="window-btn btn-maximize" onclick="maximizeWindow('${id}')"></div>
+                        <div class="window-btn btn-close" onclick="closeWindow('${id}')"></div>
+                    </div>
+                </div>
+                <div class="window-content" id="${id}-content">
+                    ${getWindowContent(type, id)}
+                </div>
+            `;
+
+            document.getElementById('desktop').appendChild(win);
+            windows[id] = { type, element: win, minimized: false };
+            setActiveWindow(id);
+            applySavedWindowLayout(id);
+
+            // Initialize dynamic content
+            if (type === 'system') {
+                applySystemStats(id, systemStats);
+            } else if (type === 'console') {
+                initConsole(id);
+            } else if (type === 'timers') {
+                updateTimersDisplay(id);
+            } else if (type === 'timeline') {
+                renderTimelineWindows();
+            } else if (type === 'notifications') {
+                unreadNotifications = 0;
+                updateNotificationBadge();
+                renderNotificationWindows();
+            }
+
+            saveLayout();
+
+            return id;
+        }
+
+        function applySavedWindowLayout(winId) {
+            const win = windows[winId];
+            const el = document.getElementById(winId);
+            if (!win || !el) return;
+            const map = loadLayout();
+            const saved = map[win.type];
+            if (!saved) return;
+            if (saved.left) el.style.left = saved.left;
+            if (saved.top) el.style.top = saved.top;
+            if (saved.width) el.style.width = saved.width;
+            if (saved.height) el.style.height = saved.height;
+            if (saved.minimized) {
+                el.style.display = 'none';
+                win.minimized = true;
+            }
+        }
+
+        function getWindowContent(type, id) {
+            switch(type) {
+                case 'system':
+                    return `
+                        <h3 style="margin-bottom: 15px; color: var(--arc-cyan); font-family: Orbitron;">Diagnostico do Sistema</h3>
+                        <div id="${id}-stats">
+                            <div class="metric-row">
+                                <span class="metric-label">CPU</span>
+                                <span class="metric-value" id="${id}-cpu">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="${id}-cpu-bar" style="width: 0%"></div>
+                            </div>
+
+                            <div class="metric-row" style="margin-top: 15px;">
+                                <span class="metric-label">MEMORIA</span>
+                                <span class="metric-value" id="${id}-memory">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="${id}-memory-bar" style="width: 0%"></div>
+                            </div>
+
+                            <div class="metric-row" style="margin-top: 15px;">
+                                <span class="metric-label">DISCO</span>
+                                <span class="metric-value" id="${id}-disk">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="${id}-disk-bar" style="width: 0%"></div>
+                            </div>
+
+                            <div class="metric-row" style="margin-top: 15px;">
+                                <span class="metric-label">GPU</span>
+                                <span class="metric-value" id="${id}-gpu">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="${id}-gpu-bar" style="width: 0%"></div>
+                            </div>
+
+                            <div class="metric-row" style="margin-top: 15px;">
+                                <span class="metric-label">REDE</span>
+                                <span class="metric-value" id="${id}-network">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="${id}-network-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    `;
+
+                case 'console':
+                    return `
+                        <div class="console-output" id="${id}-output">
+                            <div class="console-line">
+                                <span class="console-prompt">[CRONOS]</span>
+                                <span class="console-text"> Sistema inicializado</span>
+                            </div>
+                            <div class="console-line">
+                                <span class="console-prompt">[SYSTEM]</span>
+                                <span class="console-success"> Todos os sistemas operacionais</span>
+                            </div>
+                            <div class="console-line">
+                                <span class="console-prompt">[INFO]</span>
+                                <span class="console-text"> Digite 'help' para comandos disponiveis</span>
+                            </div>
+                        </div>
+                        <div class="console-input">
+                            <span class="input-prompt">$</span>
+                            <input type="text" class="console-field" id="${id}-input" placeholder="Digite um comando..." onkeypress="handleConsoleInput('${id}', event)">
+                        </div>
+                    `;
+
+                case 'knowledge':
+                    return `
+                        <h3 style="margin-bottom: 10px; color: var(--arc-cyan); font-family: Orbitron;">Inserir Conhecimento</h3>
+                        <p style="font-size: 11px; color: rgba(0, 217, 255, 0.6); margin-bottom: 15px;">
+                            Adicione fatos, regras ou preferencias para o CRONOS lembrar.
+                        </p>
+                        <textarea id="${id}-knowledge" placeholder="Ex: Meu nome completo e..."></textarea>
+                        <div class="button-group">
+                            <button onclick="submitKnowledge('${id}')">Enviar</button>
+                            <button onclick="clearField('${id}-knowledge')">Limpar</button>
+                        </div>
+                    `;
+
+                case 'message':
+                    return `
+                        <h3 style="margin-bottom: 10px; color: var(--arc-cyan); font-family: Orbitron;">Mensagem ao CRONOS</h3>
+                        <p style="font-size: 11px; color: rgba(0, 217, 255, 0.6); margin-bottom: 15px;">
+                            Envie uma mensagem ou comando direto para o assistente.
+                        </p>
+                        <textarea id="${id}-message" placeholder="Ex: Ative o modo foco..."></textarea>
+                        <div class="button-group">
+                            <button onclick="submitMessage('${id}')">Enviar</button>
+                            <button onclick="clearField('${id}-message')">Limpar</button>
+                        </div>
+                    `;
+
+                case 'memory':
+                    return `
+                        <h3 style="margin-bottom: 10px; color: var(--arc-cyan); font-family: Orbitron;">Memoria do Sistema</h3>
+                        <div class="memory-stats">
+                            <div class="memory-item">
+                                <span style="color: rgba(0, 217, 255, 0.7);">Memorias de Curto Prazo:</span>
+                                <span style="color: var(--stark-gold);" id="${id}-short">127</span>
+                            </div>
+                            <div class="memory-item">
+                                <span style="color: rgba(0, 217, 255, 0.7);">Memorias de Longo Prazo:</span>
+                                <span style="color: var(--stark-gold);" id="${id}-long">48</span>
+                            </div>
+                            <div class="memory-item">
+                                <span style="color: rgba(0, 217, 255, 0.7);">Ultima Captura de Tela:</span>
+                                <span style="color: var(--stark-gold);" id="${id}-screen">Sim</span>
+                            </div>
+                            <div class="memory-item">
+                                <span style="color: rgba(0, 217, 255, 0.7);">Ultima Imagem:</span>
+                                <span style="color: var(--stark-gold);" id="${id}-image">Sim</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 11px; color: rgba(0, 217, 255, 0.6); margin-bottom: 15px;">
+                            Gerenciamento manual das memorias do sistema. Esta acao nao pode ser desfeita.
+                        </p>
+                        <div class="button-group">
+                            <button onclick="clearShortMemory('${id}')">Limpar Curto Prazo</button>
+                            <button onclick="clearLongMemory('${id}')">Limpar Longo Prazo</button>
+                        </div>
+                        <div class="button-group" style="margin-top: 10px;">
+                            <button onclick="clearVisualMemory('${id}')">Limpar Visual</button>
+                            <button onclick="refreshMemory('${id}')">Atualizar</button>
+                        </div>
+                    `;
+
+                case 'timers':
+                    return `
+                        <h3 style="margin-bottom: 10px; color: var(--arc-cyan); font-family: Orbitron;">Temporizadores</h3>
+                        <div id="${id}-timers-list"></div>
+                        <hr style="border: 1px solid var(--panel-border); margin: 15px 0;">
+                        <h4 style="margin-bottom: 10px; color: var(--arc-cyan); font-size: 12px;">Adicionar Temporizador</h4>
+                        <input type="text" id="${id}-timer-title" placeholder="Titulo do temporizador" style="margin-bottom: 10px;">
+                        <input type="number" id="${id}-timer-duration" placeholder="Duracao (segundos)" style="margin-bottom: 10px;">
+                        <button onclick="addTimer('${id}')">Adicionar Timer</button>
+                    `;
+
+                case 'timeline':
+                    return `
+                        <h3 style="margin-bottom: 10px; color: var(--arc-cyan); font-family: Orbitron;">Timeline de Eventos</h3>
+                        <p style="font-size:11px; color: rgba(0,217,255,.7); margin-bottom:10px;">Historico das acoes, comandos e notificacoes em tempo real.</p>
+                        <div id="${id}-timeline-list"></div>
+                    `;
+
+                case 'notifications':
+                    return `
+                        <h3 style="margin-bottom: 10px; color: var(--arc-cyan); font-family: Orbitron;">Central de Alertas</h3>
+                        <div class="button-group" style="margin-bottom:10px;">
+                            <button onclick="clearNotifications()">Limpar Alertas</button>
+                        </div>
+                        <div id="${id}-notifications-list"></div>
+                    `;
+
+                case 'settings':
+                    return `
+                        <h3 style="margin-bottom: 10px; color: var(--arc-cyan); font-family: Orbitron;">Configuracoes Rapidas</h3>
+                        <div class="memory-stats">
+                            <div class="memory-item">
+                                <span style="color: rgba(0, 217, 255, 0.7);">Polling (ms):</span>
+                                <span style="color: var(--stark-gold);" id="${id}-polling-val">1000</span>
+                            </div>
+                        </div>
+                        <div class="button-group">
+                            <button onclick="setPollingRate(500, '${id}')">500ms</button>
+                            <button onclick="setPollingRate(1000, '${id}')">1000ms</button>
+                            <button onclick="setPollingRate(2000, '${id}')">2000ms</button>
+                        </div>
+                        <div class="button-group">
+                            <button onclick="saveLayout(); showNotification('Layout', 'Layout salvo.');">Salvar Layout</button>
+                            <button onclick="resetLayout()">Resetar Layout</button>
+                        </div>
+                    `;
+
+                default:
+                    return '<p>Conteudo nao disponivel</p>';
+            }
+        }
+
+        // ========================================
+        // DRAG FUNCTIONALITY
+        // ========================================
+        function startDrag(winId, event) {
+            event.preventDefault();
+            setActiveWindow(winId);
+            
+            const win = document.getElementById(winId);
+            const rect = win.getBoundingClientRect();
+
+            dragState = {
+                winId: winId,
+                startX: event.clientX,
+                startY: event.clientY,
+                offsetX: event.clientX - rect.left,
+                offsetY: event.clientY - rect.top
+            };
+
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function onDrag(event) {
+            if (!dragState) return;
+
+            const win = document.getElementById(dragState.winId);
+            const newX = event.clientX - dragState.offsetX;
+            const newY = event.clientY - dragState.offsetY;
+
+            // Bounds checking
+            const maxX = window.innerWidth - win.offsetWidth;
+            const maxY = window.innerHeight - win.offsetHeight - 50; // 50 for taskbar
+            const minY = 60; // Header height
+
+            win.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+            win.style.top = Math.max(minY, Math.min(newY, maxY)) + 'px';
+        }
+
+        function stopDrag() {
+            dragState = null;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            saveLayout();
+        }
+
+        function setActiveWindow(winId) {
+            // Remove active class from all windows
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            
+            // Set new active window
+            const win = document.getElementById(winId);
+            if (win) {
+                win.classList.add('active');
+                win.style.zIndex = ++windowCounter;
+                activeWindow = winId;
+            }
+        }
+
+        function minimizeWindow(winId) {
+            const win = document.getElementById(winId);
+            win.style.display = 'none';
+            windows[winId].minimized = true;
+            saveLayout();
+            trackTimeline('ui', `Janela minimizada: ${windows[winId].type}`);
+        }
+
+        function maximizeWindow(winId) {
+            const win = document.getElementById(winId);
+            if (win.style.width === '100%') {
+                // Restore
+                win.style.width = '600px';
+                win.style.height = '400px';
+                win.style.left = '100px';
+                win.style.top = '100px';
+            } else {
+                // Maximize
+                win.style.width = 'calc(100% - 40px)';
+                win.style.height = 'calc(100vh - 130px)';
+                win.style.left = '20px';
+                win.style.top = '70px';
+            }
+            saveLayout();
+        }
+
+        function closeWindow(winId) {
+            const win = document.getElementById(winId);
+            win.remove();
+            trackTimeline('ui', `Janela fechada: ${windows[winId].type || winId}`);
+            delete windows[winId];
+            saveLayout();
+        }
+
+        // ========================================
+        // SYSTEM STATS UPDATE
+        // ========================================
+        function applySystemStats(winId, stats) {
+            const values = stats || systemStats;
+            const map = {
+                cpu: values.cpu,
+                memory: values.ram || values.memory,
+                disk: values.disk,
+                gpu: values.gpu,
+                network: values.network || 0
+            };
+            Object.keys(map).forEach(stat => {
+                if (map[stat] === undefined || map[stat] === null) return;
+                const value = Math.round(map[stat]);
+                const el = document.getElementById(`${winId}-${stat}`);
+                const bar = document.getElementById(`${winId}-${stat}-bar`);
+                if (el) el.textContent = value + '%';
+                if (bar) bar.style.width = value + '%';
+            });
+        }
+
+        // ========================================
+        // CONSOLE FUNCTIONALITY
+        // ========================================
+        const commands = {
+            'help': 'Comandos disponiveis: status, scan, clear, time, about, hack, matrix, stark, reboot',
+            'status': 'Todos os sistemas operacionais. Nenhuma ameaca detectada.',
+            'scan': 'Escaneando rede... 127 dispositivos encontrados. Todos seguros.',
+            'time': () => new Date().toLocaleString('pt-BR'),
+            'about': 'CRONOS OS v1.0.0 - Cronos Systems (c) 2025',
+            'hack': 'Acesso negado. Boa tentativa, mas eu sou mais inteligente que isso.',
+            'matrix': 'Nao existe colher... mas ha muita energia do reator arc.',
+            'stark': 'Sir esta indisponivel no momento. Salvando o mundo, como sempre.',
+            'reboot': 'Iniciando reinicializacao do sistema... Brincadeira. Nos nunca desligamos.',
+            'clear': 'CLEAR'
+        };
+
+        function initConsole(winId) {
+            const input = document.getElementById(`${winId}-input`);
+            if (input) {
+                input.focus();
+            }
+        }
+
+        function handleConsoleInput(winId, event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById(`${winId}-input`);
+                const command = input.value.trim().toLowerCase();
+                
+                if (command) {
+                    addConsoleLog(winId, 'USER', command, 'console-warning');
+                    
+                    if (commands[command]) {
+                        if (command === 'clear') {
+                            const output = document.getElementById(`${winId}-output`);
+                            output.innerHTML = '';
+                            trackTimeline('console', 'Console limpo');
+                        } else {
+                            if (['reboot', 'hack'].includes(command)) {
+                                const ok = window.confirm('Comando sensivel. Deseja continuar');
+                                if (!ok) {
+                                    addConsoleLog(winId, 'CRONOS', 'Comando cancelado por seguranca.', 'console-warning');
+                                    input.value = '';
+                                    return;
+                                }
+                            }
+                            const response = typeof commands[command] === 'function'
+                                ? commands[command]()
+                                : commands[command];
+                            addConsoleLog(winId, 'CRONOS', response, 'console-success');
+                            trackTimeline('console', `Comando executado: ${command}`);
+                        }
+                    } else {
+                        addConsoleLog(winId, 'ERROR', `Comando nao encontrado: ${command}`, 'console-warning');
+                        trackTimeline('console', `Comando invalido: ${command}`);
+                    }
+                }
+                
+                input.value = '';
+            }
+        }
+
+        function addConsoleLog(winId, prefix, text, className) {
+            const output = document.getElementById(`${winId}-output`);
+            if (!output) return;
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.innerHTML = `
+                <span class="console-prompt">[${prefix}]</span>
+                <span class="${className}"> ${text}</span>
+            `;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // ========================================
+        // KNOWLEDGE/MESSAGE HANDLERS
+        // ========================================
+        function submitKnowledge(winId) {
+            const textarea = document.getElementById(`${winId}-knowledge`);
+            const text = textarea.value.trim();
+            if (text) {
+                callApi('submit_knowledge', text);
+                showNotification('Conhecimento', 'Conhecimento adicionado com sucesso!');
+                textarea.value = '';
+            }
+        }
+
+        // ========================================
+        // HEADER TOGGLES
+        // ========================================
+        async function toggleStandby() {
+            const btn = document.getElementById('toggle-standby');
+            const active = !btn.classList.contains('active');
+            btn.classList.toggle('active', active);
+            await callApi('set_standby', active);
+        }
+
+        async function toggleSnooze() {
+            const btn = document.getElementById('toggle-snooze');
+            const active = !btn.classList.contains('active');
+            btn.classList.toggle('active', active);
+            await callApi('set_snooze', active);
+        }
+
+        async function toggleMonitor() {
+            const btn = document.getElementById('toggle-monitor');
+            const active = !btn.classList.contains('active');
+            btn.classList.toggle('active', active);
+            await callApi('set_monitor', active);
+        }
+
+        async function toggleProactiveVision() {
+            const btn = document.getElementById('toggle-proactive-vision');
+            const active = !btn.classList.contains('active');
+            btn.classList.toggle('active', active);
+            await callApi('set_proactive_vision', active);
+        }
+
+        async function togglePtt() {
+            const btn = document.getElementById('toggle-ptt');
+            const active = !btn.classList.contains('active');
+            btn.classList.toggle('active', active);
+            await callApi('set_ptt', active);
+        }
+
+        function handlePttKeyEnter(event) {
+            if (event.key === 'Enter') {
+                applyPttKey();
+            }
+        }
+
+        async function applyPttKey() {
+            const input = document.getElementById('ptt-key-input');
+            if (!input) return;
+            const key = String(input.value || '').trim().toLowerCase() || 'insert';
+            await callApi('set_ptt_key', key);
+            window.cronosSetPttKey(key);
+            showNotification('PTT', `Tecla PTT atualizada para: ${key}`);
+            trackTimeline('config', `PTT key alterada para ${key}`);
+        }
+
+        function setPollingRate(value, winId) {
+            const ms = Number(value) || 1000;
+            pollIntervalMs = Math.max(300, ms);
+            const el = document.getElementById(`${winId}-polling-val`);
+            if (el) el.textContent = String(pollIntervalMs);
+            startPolling();
+            showNotification('Sistema', `Polling ajustado para ${pollIntervalMs}ms`);
+            trackTimeline('config', `Polling atualizado para ${pollIntervalMs}ms`);
+        }
+
+        function submitMessage(winId) {
+            const textarea = document.getElementById(`${winId}-message`);
+            const text = textarea.value.trim();
+            if (text) {
+                callApi('submit_message', text);
+                showNotification('Mensagem', 'Mensagem enviada ao CRONOS!');
+                textarea.value = '';
+            }
+        }
+
+        function clearField(fieldId) {
+            document.getElementById(fieldId).value = '';
+        }
+
+        // ========================================
+        // MEMORY HANDLERS
+        // ========================================
+        function clearShortMemory(winId) {
+            callApi('clear_short_memory');
+            showNotification('Memoria', 'Memoria de curto prazo limpa!');
+            document.getElementById(`${winId}-short`).textContent = '0';
+        }
+
+        function clearLongMemory(winId) {
+            callApi('clear_long_memory');
+            showNotification('Memoria', 'Memoria de longo prazo limpa!');
+            document.getElementById(`${winId}-long`).textContent = '0';
+        }
+
+        function clearVisualMemory(winId) {
+            callApi('clear_visual_memory');
+            showNotification('Memoria', 'Memoria visual limpa!');
+            document.getElementById(`${winId}-screen`).textContent = 'Nao';
+            document.getElementById(`${winId}-image`).textContent = 'Nao';
+        }
+
+        async function refreshMemory(winId) {
+            const stats = await callApi('get_memory_stats');
+            if (stats) {
+                applyMemoryStats(winId, stats);
+                showNotification('Memoria', 'Estatisticas atualizadas!');
+            }
+        }
+
+  function applyMemoryStats(winId, stats) {
+    if (!stats) return;
+    const shortVal = stats.short_count ? stats.short_count : 0;
+    const longVal = stats.long_count ? stats.long_count : 0;
+    const hasScreen = stats.has_last_screen ? 'Sim' : 'Não';
+    const hasImage = stats.has_last_image ? 'Sim' : 'Não';
+    const elShort = document.getElementById(`${winId}-short`);
+    const elLong = document.getElementById(`${winId}-long`);
+    const elScreen = document.getElementById(`${winId}-screen`);
+    const elImage = document.getElementById(`${winId}-image`);
+    if (elShort) elShort.textContent = shortVal;
+    if (elLong) elLong.textContent = longVal;
+    if (elScreen) elScreen.textContent = hasScreen;
+    if (elImage) elImage.textContent = hasImage;
+}
+        // ========================================
+        // TIMER FUNCTIONALITY
+        // ========================================
+        function addTimer(winId) {
+            const titleInput = document.getElementById(`${winId}-timer-title`);
+            const durationInput = document.getElementById(`${winId}-timer-duration`);
+            
+            const title = titleInput.value.trim() || 'Temporizador';
+            const duration = parseInt(durationInput.value) || 60;
+            
+            if (duration > 0) {
+                timers.push({
+                    title: title,
+                    endTime: Date.now() + (duration * 1000),
+                    duration: duration
+                });
+                
+                titleInput.value = '';
+                durationInput.value = '';
+                
+                updateTimersDisplay(winId);
+                showNotification('Timer', `Timer "${title}" adicionado por ${duration}s!`);
+            }
+        }
+
+        function updateTimersDisplay(winId) {
+            const container = document.getElementById(`${winId}-timers-list`);
+            if (!container) return;
+
+            const now = Date.now();
+            const activeTimers = timers.filter(t => t.endTime > now);
+            
+            if (activeTimers.length === 0) {
+                container.innerHTML = '<p style="color: rgba(0, 217, 255, 0.6); font-size: 12px;">Nenhum temporizador ativo.</p>';
+                return;
+            }
+
+            container.innerHTML = activeTimers.map((timer, index) => {
+                const remaining = Math.max(0, Math.ceil((timer.endTime - now) / 1000));
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                return `
+                    <div class="timer-card">
+                        <div class="timer-title">${timer.title}</div>
+                        <div class="timer-remaining">${timeStr}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update all timer displays every second
+        setInterval(() => {
+            Object.keys(windows).forEach(winId => {
+                if (windows[winId].type === 'timers') {
+                    updateTimersDisplay(winId);
+                }
+            });
+        }, 1000);
+
+        // ========================================
+        // NOTIFICATION SYSTEM
+        // ========================================
+        function showNotification(title, body) {
+            addNotificationEntry(title, body);
+            trackTimeline('notify', `${title}: ${body}`);
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.innerHTML = `
+                <div class="notification-title">${title}</div>
+                <div class="notification-body">${body}</div>
+            `;
+            
+            document.body.appendChild(notif);
+            
+            setTimeout(() => {
+                notif.style.animation = 'slideInRight 0.5s ease-out reverse';
+                setTimeout(() => notif.remove(), 500);
+            }, 5000);
+        }
+
+        function showAbout() {
+            showNotification(
+                'CRONOS OS',
+                'Sistema Operacional Avancado com IA integrada. Desenvolvido para maxima eficiencia e controle.'
+            );
+        }
+
+        // ========================================
+        // CLOCK UPDATE
+        // ========================================
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('time').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // ========================================
+        // INITIALIZATION
+        // ========================================
+        window.addEventListener('load', () => {
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // Create default windows
+            createWindow('system', 'Sistema', 50, 100);
+            createWindow('console', 'Console', 500, 100);
+            updateNotificationBadge();
+            renderPaletteList();
+            trackTimeline('system', 'UI inicializada');
+            startPolling();
+            
+            showNotification('Sistema', 'CRONOS OS inicializado com sucesso!');
+            
+            console.log('%cCRONOS OS v1.0.0 INITIALIZED', 'color: #00d9ff; font-size: 20px; font-weight: bold;');
+        });
+
+        // Click desktop to deactivate windows
+        document.getElementById('desktop').addEventListener('click', (e) => {
+            if (e.target.id === 'desktop') {
+                document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            }
+        });
+
+        const paletteOverlay = document.getElementById('command-palette');
+        if (paletteOverlay) {
+            paletteOverlay.addEventListener('click', (e) => {
+                if (e.target === paletteOverlay) closeCommandPalette();
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                openCommandPalette();
+                return;
+            }
+            if (e.key === 'Escape') {
+                closeCommandPalette();
+                return;
+            }
+            const overlay = document.getElementById('command-palette');
+            if (!overlay || overlay.style.display !== 'flex') return;
+            if (e.key === 'ArrowDown') {
+                const list = getFilteredPaletteCommands();
+                if (list.length) paletteIndex = (paletteIndex + 1) % list.length;
+                renderPaletteList();
+                e.preventDefault();
+            } else if (e.key === 'ArrowUp') {
+                const list = getFilteredPaletteCommands();
+                if (list.length) paletteIndex = (paletteIndex - 1 + list.length) % list.length;
+                renderPaletteList();
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                runPaletteCommand(paletteIndex);
+                e.preventDefault();
+            }
+        });
+
+        // ========================================
+        // POLLING STATE
+        // ========================================
+        let lastLogId = 0;
+
+        // ========================================
+        // CONNECTION STATUS
+        // ========================================
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            const status = document.getElementById('conn-status');
+            if (status) {
+                if (connected) {
+                    status.textContent = '● CONECTADO';
+                    status.className = 'connection-status connected';
+                } else {
+                    status.textContent = '● DESCONECTADO';
+                    status.className = 'connection-status disconnected';
+                }
+            }
+        }
+        async function pollState() {
+            try {
+                const res = await fetch(`/api/state?since=${lastLogId}`);
+                if (!res.ok) throw new Error('poll failed');
+                const data = await res.json();
+                updateConnectionStatus(true);
+                if (data.logs && data.logs.length) {
+                    const consoleId = Object.keys(windows).find(id => windows[id].type === 'console');
+                    if (consoleId) {
+                        data.logs.forEach(l => {
+                            addConsoleLog(consoleId, 'LOG', l.text, 'console-text');
+                            lastLogId = Math.max(lastLogId, l.id);
+                        });
+                    }
+                }
+                if (data.system) {
+                    const ids = Object.keys(windows).filter(id => windows[id].type === 'system');
+                    ids.forEach(id => applySystemStats(id, data.system));
+                }
+                if (data.memory) {
+                    const ids = Object.keys(windows).filter(id => windows[id].type === 'memory');
+                    ids.forEach(id => applyMemoryStats(id, data.memory));
+                }
+                if (data.controls) {
+                    Object.keys(data.controls).forEach(name => {
+                        window.cronosSetToggle(name, !!data.controls[name]);
+                    });
+                }
+                if (data.settings && data.settings.ptt_key) {
+                    window.cronosSetPttKey(data.settings.ptt_key);
+                }
+            } catch (e) {
+                updateConnectionStatus(false);
+            }
+        }
+        function startPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(pollState, pollIntervalMs);
+            pollState();
+        }
+    </script>
+</body>
+</html>
+
+

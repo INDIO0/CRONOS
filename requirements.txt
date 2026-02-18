@@ -1,0 +1,23 @@
+# Core dependencies
+python-dotenv
+requests
+openai>=1.0.0
+
+# Audio processing
+sounddevice
+soundfile
+numpy
+edge-tts
+groq
+psutil
+
+# UI and automation
+pyautogui
+Pillow
+keyboard
+pyperclip
+imageio
+imageio-ffmpeg
+
+# Optional: Local Whisper (fallback)
+# openai-whisper
